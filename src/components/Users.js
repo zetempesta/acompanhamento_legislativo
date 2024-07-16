@@ -1,312 +1,329 @@
+// Users.js
 import axios from "axios";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { Component } from "react";
 import AddUserModal from "./AddUserModal";
 import ConfirmModal from "./ConfirmModal";
 import EditUserModal from "./EditUserModal";
 import Header from "./Header";
 
-const Users = () => {
-  const [activeItem, setActiveItem] = useState("Usuários");
-  const [users, setUsers] = useState([]);
-  const [editingUserId, setEditingUserId] = useState(null);
-  const [searchValue, setSearchValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentInputPagination, setCurrentInputPagination] = useState(1);
-  const [itemsPerPage] = useState(20);
-  const [totalPages, setTotalPages] = useState(1);
-  const [error, setError] = useState(null);
-  const [totalElements, setTotalElements] = useState(0);
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [userIdToDelete, setUserIdToDelete] = useState(null);
-  const [addUserModalOpen, setAddUserModalOpen] = useState(false);
+class Users extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      activeItem: props.initialActiveItem || "Usuários",
+      users: [],
+      editingUserId: null,
+      searchValue: props.initialSearchValue || "",
+      isLoading: false,
+      isDeleting: null,
+      currentPage: 1,
+      currentInputPagination: 1,
+      itemsPerPage: 20,
+      totalPages: 1,
+      error: null,
+      totalElements: 0,
+      confirmModalOpen: false,
+      userIdToDelete: null,
+      addUserModalOpen: false,
+    };
+  }
 
-  const handleNavClick = (item) => {
-    setActiveItem(item);
+  componentDidMount() {
+    this.fetchUsers(this.state.currentPage, this.state.searchValue);
+  }
+
+  handleNavClick = (item) => {
+    this.setState({ activeItem: item });
   };
 
-  const fetchUsers = useCallback(
-    async (page = 1, filter = "") => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get(`http://localhost:8080/usuarios`, {
-          params: {
-            page: page,
-            size: itemsPerPage,
-            filter: filter,
-          },
+  fetchUsers = async (page = 1, filter = "") => {
+    this.setState({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`http://localhost:8080/usuarios`, {
+        params: {
+          page: page,
+          size: this.state.itemsPerPage,
+          filter: filter,
+        },
+      });
+      if (response.data) {
+        this.setState({
+          users: response.data.content,
+          totalElements: response.data.totalElements,
+          totalPages: Math.ceil(response.data.totalElements / this.state.itemsPerPage),
+          currentInputPagination: page,
         });
-        if (response.data) {
-          setUsers(response.data.content);
-          setTotalElements(response.data.totalElements);
-          setTotalPages(Math.ceil(response.data.totalElements / itemsPerPage));
-          setCurrentInputPagination(page);
-        } else {
-          setUsers([]);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar usuários:", error);
-        setError("Erro ao buscar usuários");
-        setUsers([]);
+      } else {
+        this.setState({ users: [] });
       }
-      setIsLoading(false);
-    },
-    [itemsPerPage]
-  );
-
-  useEffect(() => {
-    fetchUsers(currentPage, searchValue);
-  }, [currentPage, fetchUsers, searchValue]);
-
-  const handleKeyDown = (event) => {
-    setCurrentPage(1);
-    fetchUsers(1, searchValue);
+    } catch (error) {
+      console.error("Erro ao buscar usuários:", error);
+      this.setState({ error: "Erro ao buscar usuários", users: [] });
+    }
+    this.setState({ isLoading: false });
   };
 
-  const handleInputChange = (event) => {
-    setSearchValue(event.target.value);
+  handleKeyDown = (event) => {
+    this.setState({ currentPage: 1 });
+    this.fetchUsers(1, this.state.searchValue);
   };
 
-  const handleEdit = (userId) => {
-    setEditingUserId(userId);
+  handleInputChange = (event) => {
+    this.setState({ searchValue: event.target.value });
   };
 
-  const handleDelete = (userId) => {
-    setUserIdToDelete(userId);
-    setConfirmModalOpen(true);
+  handleEdit = (userId) => {
+    this.setState({ editingUserId: userId });
   };
 
-  const confirmDelete = async () => {
-    setIsDeleting(userIdToDelete);
-    setConfirmModalOpen(false);
+  handleDelete = (userId) => {
+    this.setState({ userIdToDelete: userId, confirmModalOpen: true });
+  };
+
+  confirmDelete = async () => {
+    const { userIdToDelete, currentPage, searchValue } = this.state;
+    this.setState({ isDeleting: userIdToDelete, confirmModalOpen: false });
     try {
       const response = await axios.delete(`/usuario/${userIdToDelete}`);
       console.log("Usuário excluído:", response.data);
-      fetchUsers(currentPage, searchValue);
+      this.fetchUsers(currentPage, searchValue);
     } catch (error) {
       console.error("Erro ao excluir usuário:", error);
-      setError("Erro ao excluir usuário");
+      this.setState({ error: "Erro ao excluir usuário" });
     }
-    setIsDeleting(null);
+    this.setState({ isDeleting: null });
   };
 
-  const handleCloseModal = () => {
-    setEditingUserId(null);
-    fetchUsers(currentPage);
+  handleCloseModal = () => {
+    this.setState({ editingUserId: null });
+    this.fetchUsers(this.state.currentPage);
   };
 
-  const handleNewUser = () => {
-    setAddUserModalOpen(true);
+  handleNewUser = () => {
+    this.setState({ addUserModalOpen: true });
   };
 
-  const handlePageChange = (pageNumber) => {
-    if (pageNumber >= 1 && pageNumber <= totalPages && pageNumber) {
-      if (pageNumber !== currentPage) {
-        setCurrentInputPagination(pageNumber);
-        setCurrentPage(pageNumber);
-      }
+  handlePageChange = (pageNumber) => {
+    const { totalPages, currentPage } = this.state;
+    if (pageNumber >= 1 && pageNumber <= totalPages && pageNumber !== currentPage) {
+      this.setState({ currentInputPagination: pageNumber, currentPage: pageNumber });
+      this.fetchUsers(pageNumber, this.state.searchValue);
     }
   };
 
-  const handleInputPageChange = (event) => {
+  handleInputPageChange = (event) => {
     const pageNumber = parseInt(event.target.value, 10);
     if (!isNaN(pageNumber)) {
-      setCurrentInputPagination(pageNumber);
+      this.setState({ currentInputPagination: pageNumber });
     }
   };
 
-  const handlePageInputKeyDown = (event) => {
+  handlePageInputKeyDown = (event) => {
     const pageNumber = parseInt(event.target.value, 10);
-    if (event.key === "Enter") {
-      if (!isNaN(pageNumber)) {
-        handlePageChange(pageNumber);
-      }
+    if (event.key === "Enter" && !isNaN(pageNumber)) {
+      this.handlePageChange(pageNumber);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <Header activeItem={activeItem} onNavClick={handleNavClick} />
-      <main className="p-4">
-        <div className="flex items-center ">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-4">Usuários</h2>
-          </div>
-          <div className="flex items-right">
-            <input
-              className="text-gray-500 px-6 py-1 border border-gray-300 rounded-lg mb-4"
-              placeholder="Pesquisar"
-              value={searchValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-            />
-          </div>
-        </div>
+  render() {
+    const {
+      activeItem,
+      users,
+      editingUserId,
+      searchValue,
+      isLoading,
+      isDeleting,
+      currentPage,
+      currentInputPagination,
+      totalPages,
+      totalElements,
+      confirmModalOpen,
+      addUserModalOpen,
+      error,
+    } = this.state;
 
-        <div className="overflow-x-auto">
-          <div className="max-w-full mx-auto">
-            <div className="max-h-[70vh] overflow-auto">
-              <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-                <thead className="bg-blue-800 text-white sticky top-0">
-                  <tr>
-                    <th className="py-3 px-4 text-left">ID</th>
-                    <th className="py-3 px-4 text-left">Nome</th>
-                    <th className="py-3 px-4 text-left">Usuário</th>
-                    <th className="py-3 px-4 text-left">Email</th>
-                    <th className="py-3 px-4 text-right">
-                      <div className="items-right text-blue-900 space-x-2">
-                        <button
-                          onClick={() => handlePageChange(1)}
-                          disabled={currentPage === 1}
-                          className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
-                            currentPage === 1
-                              ? "bg-gray-200 cursor-not-allowed"
-                              : "bg-white hover:bg-gray-100"
-                          }`}
-                          aria-label="First Page"
-                        >
-                          <i className="fas fa-angle-double-left"></i>
-                        </button>
-                        <button
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          disabled={currentPage === 1}
-                          className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
-                            currentPage === 1
-                              ? "bg-gray-200 cursor-not-allowed"
-                              : "bg-white hover:bg-gray-100"
-                          }`}
-                          aria-label="Previous Page"
-                        >
-                          <i className="fas fa-angle-left"></i>
-                        </button>
-                        <input
-                          value={currentInputPagination}
-                          onChange={handleInputPageChange}
-                          onKeyDown={handlePageInputKeyDown}
-                          className="w-16 h-8 text-center border border-gray-300 rounded-md"
-                          aria-label="Page Number"
-                        />
-                        <button
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          disabled={currentPage === totalPages}
-                          className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
-                            currentPage === totalPages
-                              ? "bg-gray-200 cursor-not-allowed"
-                              : "bg-white hover:bg-gray-100"
-                          }`}
-                          aria-label="Next Page"
-                        >
-                          <i className="fas fa-angle-right"></i>
-                        </button>
-                        <button
-                          onClick={() => handlePageChange(totalPages)}
-                          disabled={currentPage === totalPages}
-                          className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
-                            currentPage === totalPages
-                              ? "bg-gray-200 cursor-not-allowed"
-                              : "bg-white hover:bg-gray-100"
-                          }`}
-                          aria-label="Last Page"
-                        >
-                          <i className="fas fa-angle-double-right"></i>
-                        </button>
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header activeItem={activeItem} onNavClick={this.handleNavClick} />
+        <main className="p-4">
+          <div className="flex items-center ">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold mb-4">Usuários</h2>
+            </div>
+            <div className="flex items-right">
+              <input
+                className="text-gray-500 px-6 py-1 border border-gray-300 rounded-lg mb-4"
+                placeholder="Pesquisar"
+                value={searchValue}
+                onChange={this.handleInputChange}
+                onKeyDown={this.handleKeyDown}
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="max-w-full mx-auto">
+              <div className="max-h-[70vh] overflow-auto">
+                <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+                  <thead className="bg-blue-800 text-white sticky top-0">
                     <tr>
-                      <td colSpan="5" className="py-3 px-4 text-center">
-                        Carregando...
-                      </td>
-                    </tr>
-                  ) : users.length > 0 ? (
-                    users.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="hover:bg-gray-100 transition-colors duration-200"
-                      >
-                        <td className="py-3 px-4 border-b border-gray-200">
-                          {user.id}
-                        </td>
-                        <td className="py-3 px-4 border-b border-gray-200">
-                          {user.nome}
-                        </td>
-                        <td className="py-3 px-4 border-b border-gray-200">
-                          {user.usuario}
-                        </td>
-                        <td className="py-3 px-4 border-b border-gray-200">
-                          {user.email}
-                        </td>
-                        <td className="py-3 px-4 border-b border-gray-200 text-right">
+                      <th className="py-3 px-4 text-left">ID</th>
+                      <th className="py-3 px-4 text-left">Nome</th>
+                      <th className="py-3 px-4 text-left">Usuário</th>
+                      <th className="py-3 px-4 text-left">Email</th>
+                      <th className="py-3 px-4 text-right">
+                        <div className="items-right text-blue-900 space-x-2">
                           <button
-                            className="px-3 py-1 text-blue-500 rounded-lg hover:text-white hover:bg-blue-600 transition-colors duration-300 mr-2"
-                            onClick={() => handleEdit(user.id)}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            className={`px-3 py-1 text-red-500 rounded-lg hover:text-white hover:bg-red-600 transition-colors duration-300 ${
-                              isDeleting === user.id ? "cursor-not-allowed" : ""
+                            onClick={() => this.handlePageChange(1)}
+                            disabled={currentPage === 1}
+                            className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
+                              currentPage === 1
+                                ? "bg-gray-200 cursor-not-allowed"
+                                : "bg-white hover:bg-gray-100"
                             }`}
-                            onClick={() => handleDelete(user.id)}
-                            disabled={isDeleting === user.id}
+                            aria-label="First Page"
                           >
-                            {isDeleting === user.id
-                              ? "Excluindo..."
-                              : "Excluir"}
+                            <i className="fas fa-angle-double-left"></i>
                           </button>
+                          <button
+                            onClick={() => this.handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
+                              currentPage === 1
+                                ? "bg-gray-200 cursor-not-allowed"
+                                : "bg-white hover:bg-gray-100"
+                            }`}
+                            aria-label="Previous Page"
+                          >
+                            <i className="fas fa-angle-left"></i>
+                          </button>
+                          <input
+                            value={currentInputPagination}
+                            onChange={this.handleInputPageChange}
+                            onKeyDown={this.handlePageInputKeyDown}
+                            className="w-16 h-8 text-center border border-gray-300 rounded-md"
+                            aria-label="Page Number"
+                          />
+                          <button
+                            onClick={() => this.handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
+                              currentPage === totalPages
+                                ? "bg-gray-200 cursor-not-allowed"
+                                : "bg-white hover:bg-gray-100"
+                            }`}
+                            aria-label="Next Page"
+                          >
+                            <i className="fas fa-angle-right"></i>
+                          </button>
+                          <button
+                            onClick={() => this.handlePageChange(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
+                              currentPage === totalPages
+                                ? "bg-gray-200 cursor-not-allowed"
+                                : "bg-white hover:bg-gray-100"
+                            }`}
+                            aria-label="Last Page"
+                          >
+                            <i className="fas fa-angle-double-right"></i>
+                          </button>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan="5" className="py-3 px-4 text-center">
+                          Carregando...
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5" className="py-3 px-4 text-center">
-                        Nenhum usuário encontrado
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-between items-center mt-2 mb-4">
-              <div className="flex items-center space-x-2">
-                <button
-                  className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-300"
-                  onClick={handleNewUser}
-                >
-                  <span>Novo</span>
-                </button>
+                    ) : users.length > 0 ? (
+                      users.map((user) => (
+                        <tr
+                          key={user.id}
+                          className="hover:bg-gray-100 transition-colors duration-200"
+                        >
+                          <td className="py-3 px-4 border-b border-gray-200">
+                            {user.id}
+                          </td>
+                          <td className="py-3 px-4 border-b border-gray-200">
+                            {user.nome}
+                          </td>
+                          <td className="py-3 px-4 border-b border-gray-200">
+                            {user.usuario}
+                          </td>
+                          <td className="py-3 px-4 border-b border-gray-200">
+                            {user.email}
+                          </td>
+                          <td className="py-3 px-4 border-b border-gray-200 text-right">
+                            <button
+                              className="px-3 py-1 text-blue-500 rounded-lg hover:text-white hover:bg-blue-600 transition-colors duration-300 mr-2"
+                              onClick={() => this.handleEdit(user.id)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              className={`px-3 py-1 text-red-500 rounded-lg hover:text-white hover:bg-red-600 transition-colors duration-300 ${
+                                isDeleting === user.id ? "cursor-not-allowed" : ""
+                              }`}
+                              onClick={() => this.handleDelete(user.id)}
+                              disabled={isDeleting === user.id}
+                            >
+                              {isDeleting === user.id
+                                ? "Excluindo..."
+                                : "Excluir"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="py-3 px-4 text-center">
+                          Nenhum usuário encontrado
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-              <span className="text-gray-500">Registros: {totalElements}</span>
+              <div className="flex justify-between items-center mt-2 mb-4">
+                <div className="flex items-center space-x-2">
+                  <button
+                    className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-300"
+                    onClick={this.handleNewUser}
+                  >
+                    <span>Novo</span>
+                  </button>
+                </div>
+                <span className="text-gray-500">Registros: {totalElements}</span>
+              </div>
             </div>
           </div>
-        </div>
-        {editingUserId !== null && (
-          <EditUserModal userId={editingUserId} onClose={handleCloseModal} />
-        )}
-        {confirmModalOpen && (
-          <ConfirmModal
-            isOpen={confirmModalOpen}
-            onClose={() => setConfirmModalOpen(false)}
-            onConfirm={confirmDelete}
-            message="Tem certeza de que deseja excluir este usuário?"
-          />
-        )}
-        {addUserModalOpen && (
-          <AddUserModal
-            isOpen={addUserModalOpen}
-            onClose={() => setAddUserModalOpen(false)}
-            onAdd={() => fetchUsers(currentPage, searchValue)}
-          />
-        )}
-        {error && <div className="text-red-500 text-center mt-4">{error}</div>}
-      </main>
-    </div>
-  );
-};
+          {editingUserId !== null && (
+            <EditUserModal userId={editingUserId} onClose={this.handleCloseModal} />
+          )}
+          {confirmModalOpen && (
+            <ConfirmModal
+              isOpen={confirmModalOpen}
+              onClose={() => this.setState({ confirmModalOpen: false })}
+              onConfirm={this.confirmDelete}
+              message="Tem certeza de que deseja excluir este usuário?"
+            />
+          )}
+          {addUserModalOpen && (
+            <AddUserModal
+              isOpen={addUserModalOpen}
+              onClose={() => this.setState({ addUserModalOpen: false })}
+              onAdd={() => this.fetchUsers(this.state.currentPage, this.state.searchValue)}
+            />
+          )}
+          {error && <div className="text-red-500 text-center mt-4">{error}</div>}
+        </main>
+      </div>
+    );
+  }
+}
 
 export default Users;
