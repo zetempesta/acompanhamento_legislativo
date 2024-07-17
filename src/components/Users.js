@@ -11,7 +11,7 @@ class Users extends Component {
     super(props);
     this.state = {
       activeItem: props.initialActiveItem || "Usuários",
-      users: [],
+      records: [],
       editingUserId: null,
       searchValue: props.initialSearchValue || "",
       isLoading: false,
@@ -25,27 +25,38 @@ class Users extends Component {
       confirmModalOpen: false,
       userIdToDelete: null,
       addUserModalOpen: false,
-      sortColumn: '',
+      sortColumn: "",
       sortDirection: "asc",
       service_api: "http://localhost:8080/usuarios",
-      columns: [
-        {
-          column: "id",
-          title: "ID",
-        },
-        {
-          column: "nome",
-          title: "Nome",
-        },
-        {
-          column: "usuario",
-          title: "Usuário",
-        },
-        {
-          column: "email",
-          title: "Email",
-        },
-      ],
+      tableTitle: "Usuários",
+      showTitle: true,
+      showSearch: true,
+      showEdit: true,
+      showDelete: true,
+      showAdd: true,
+      showCounter: true,
+      showPagination: true,
+      columns: {
+        pk: "id",
+        columns: [
+          {
+            column: "id",
+            title: "ID",
+          },
+          {
+            column: "nome",
+            title: "Nome",
+          },
+          {
+            column: "usuario",
+            title: "Usuário",
+          },
+          {
+            column: "email",
+            title: "Email",
+          },
+        ],
+      },
     };
   }
 
@@ -57,13 +68,6 @@ class Users extends Component {
     this.setState({ activeItem: item });
   };
 
-  getColumnByTitle = (title) => {
-    const item = this.state.columns.find(
-      (obj) => obj.title.toLowerCase() === title.toLowerCase()
-    );
-    return item ? item.column : null;
-  };
-
   fetchUsers = async (
     page = 1,
     filter = "",
@@ -72,18 +76,17 @@ class Users extends Component {
   ) => {
     this.setState({ isLoading: true, error: null });
     try {
-      const params =  {
-        "page": page,
-        "size": this.state.itemsPerPage,
-        "filter": filter,
-        "sort":{"sortColumn":sortColumn,"sortDirection":sortDirection},
+      const params = {
+        page: page,
+        size: this.state.itemsPerPage,
+        filter: filter,
+        sort: { sortColumn: sortColumn, sortDirection: sortDirection },
       };
-
 
       const response = await axios.post(this.state.service_api, params);
       if (response.data) {
         this.setState({
-          users: response.data.content,
+          records: response.data.content,
           totalElements: response.data.totalElements,
           totalPages: Math.ceil(
             response.data.totalElements / this.state.itemsPerPage
@@ -91,19 +94,17 @@ class Users extends Component {
           currentInputPagination: page,
         });
       } else {
-        this.setState({ users: [] });
+        this.setState({ records: [] });
       }
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
-      this.setState({ error: "Erro ao buscar usuários", users: [] });
+      this.setState({ error: "Erro ao buscar usuários", records: [] });
     }
     this.setState({ isLoading: false });
   };
 
   handleSort = (column) => {
     const { sortColumn, sortDirection } = this.state;
-
-    
 
     let newSortDirection = "asc";
     if (sortColumn === column && sortDirection === "asc") {
@@ -197,7 +198,7 @@ class Users extends Component {
   render() {
     const {
       activeItem,
-      users,
+      records,
       editingUserId,
       searchValue,
       isLoading,
@@ -212,26 +213,41 @@ class Users extends Component {
       sortColumn,
       sortDirection,
       columns,
+      tableTitle,
+      showTitle,
+      showSearch,
+      showEdit,
+      showDelete,
+      showAdd,
+      showCounter,
+      showPagination,
     } = this.state;
 
     return (
       <div className="min-h-screen bg-gray-100">
         <Header activeItem={activeItem} onNavClick={this.handleNavClick} />
         <main className="p-4">
-          <div className="flex items-center ">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-4">Usuários</h2>
+          {showTitle || showSearch ? (
+            <div className="flex items-center ">
+              {showTitle ? (
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold mb-4">{tableTitle}</h2>
+                </div>
+              ) : null}
+
+              {showSearch ? (
+                <div className="flex items-right">
+                  <input
+                    className="text-gray-500 px-6 py-1 border border-gray-300 rounded-lg mb-4"
+                    placeholder="Pesquisar"
+                    value={searchValue}
+                    onChange={this.handleInputChange}
+                    onKeyDown={this.handleKeyDown}
+                  />
+                </div>
+              ) : null}
             </div>
-            <div className="flex items-right">
-              <input
-                className="text-gray-500 px-6 py-1 border border-gray-300 rounded-lg mb-4"
-                placeholder="Pesquisar"
-                value={searchValue}
-                onChange={this.handleInputChange}
-                onKeyDown={this.handleKeyDown}
-              />
-            </div>
-          </div>
+          ) : null}
 
           <div className="overflow-x-auto">
             <div className="max-w-full mx-auto">
@@ -239,7 +255,7 @@ class Users extends Component {
                 <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
                   <thead className="bg-blue-800 text-white sticky top-0 rounded-md">
                     <tr>
-                      {columns.map((item) => (
+                      {columns.columns.map((item) => (
                         <th
                           key={item.column}
                           className="py-3 px-4 text-left cursor-pointer"
@@ -253,113 +269,71 @@ class Users extends Component {
                             : ""}
                         </th>
                       ))}
-                      {/* <th
-                        className="py-3 px-4 text-left cursor-pointer"
-                        onClick={() => this.handleSort("id")}
-                      >
-                        ID{" "}
-                        {sortColumn === "id"
-                          ? sortDirection === "asc"
-                            ? "▲"
-                            : "▼"
-                          : ""}
-                      </th>
-                      <th
-                        className="py-3 px-4 text-left cursor-pointer"
-                        onClick={() => this.handleSort("nome")}
-                      >
-                        Nome{" "}
-                        {sortColumn === "nome"
-                          ? sortDirection === "asc"
-                            ? "▲"
-                            : "▼"
-                          : ""}
-                      </th>
-                      <th
-                        className="py-3 px-4 text-left cursor-pointer"
-                        onClick={() => this.handleSort("usuario")}
-                      >
-                        Usuário{" "}
-                        {sortColumn === "usuario"
-                          ? sortDirection === "asc"
-                            ? "▲"
-                            : "▼"
-                          : ""}
-                      </th>
-                      <th
-                        className="py-3 px-4 text-left cursor-pointer"
-                        onClick={() => this.handleSort("email")}
-                      >
-                        Email{" "}
-                        {sortColumn === "email"
-                          ? sortDirection === "asc"
-                            ? "▲"
-                            : "▼"
-                          : ""}
-                      </th> */}
-                      <th className="py-3 px-4 text-right">
-                        <div className="items-right text-blue-900 space-x-2">
-                          <button
-                            onClick={() => this.handlePageChange(1)}
-                            disabled={currentPage === 1}
-                            className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
-                              currentPage === 1
-                                ? "bg-gray-200 cursor-not-allowed"
-                                : "bg-white hover:bg-gray-100"
-                            }`}
-                            aria-label="First Page"
-                          >
-                            <i className="fas fa-angle-double-left"></i>
-                          </button>
-                          <button
-                            onClick={() =>
-                              this.handlePageChange(currentPage - 1)
-                            }
-                            disabled={currentPage === 1}
-                            className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
-                              currentPage === 1
-                                ? "bg-gray-200 cursor-not-allowed"
-                                : "bg-white hover:bg-gray-100"
-                            }`}
-                            aria-label="Previous Page"
-                          >
-                            <i className="fas fa-angle-left"></i>
-                          </button>
-                          <input
-                            value={currentInputPagination}
-                            onChange={this.handleInputPageChange}
-                            onKeyDown={this.handlePageInputKeyDown}
-                            className="w-16 h-8 text-center border border-gray-300 rounded-md"
-                            aria-label="Page Number"
-                          />
-                          <button
-                            onClick={() =>
-                              this.handlePageChange(currentPage + 1)
-                            }
-                            disabled={currentPage === totalPages}
-                            className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
-                              currentPage === totalPages
-                                ? "bg-gray-200 cursor-not-allowed"
-                                : "bg-white hover:bg-gray-100"
-                            }`}
-                            aria-label="Next Page"
-                          >
-                            <i className="fas fa-angle-right"></i>
-                          </button>
-                          <button
-                            onClick={() => this.handlePageChange(totalPages)}
-                            disabled={currentPage === totalPages}
-                            className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
-                              currentPage === totalPages
-                                ? "bg-gray-200 cursor-not-allowed"
-                                : "bg-white hover:bg-gray-100"
-                            }`}
-                            aria-label="Last Page"
-                          >
-                            <i className="fas fa-angle-double-right"></i>
-                          </button>
-                        </div>
-                      </th>
+                      {showPagination||showEdit||showDelete? <th className="py-3 px-4 text-right">
+                        {showPagination ? (
+                          <div className="items-right text-blue-900 space-x-2">
+                            <button
+                              onClick={() => this.handlePageChange(1)}
+                              disabled={currentPage === 1}
+                              className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
+                                currentPage === 1
+                                  ? "bg-gray-200 cursor-not-allowed"
+                                  : "bg-white hover:bg-gray-100"
+                              }`}
+                              aria-label="First Page"
+                            >
+                              <i className="fas fa-angle-double-left"></i>
+                            </button>
+                            <button
+                              onClick={() =>
+                                this.handlePageChange(currentPage - 1)
+                              }
+                              disabled={currentPage === 1}
+                              className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
+                                currentPage === 1
+                                  ? "bg-gray-200 cursor-not-allowed"
+                                  : "bg-white hover:bg-gray-100"
+                              }`}
+                              aria-label="Previous Page"
+                            >
+                              <i className="fas fa-angle-left"></i>
+                            </button>
+                            <input
+                              value={currentInputPagination}
+                              onChange={this.handleInputPageChange}
+                              onKeyDown={this.handlePageInputKeyDown}
+                              className="w-16 h-8 text-center border border-gray-300 rounded-md"
+                              aria-label="Page Number"
+                            />
+                            <button
+                              onClick={() =>
+                                this.handlePageChange(currentPage + 1)
+                              }
+                              disabled={currentPage === totalPages}
+                              className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
+                                currentPage === totalPages
+                                  ? "bg-gray-200 cursor-not-allowed"
+                                  : "bg-white hover:bg-gray-100"
+                              }`}
+                              aria-label="Next Page"
+                            >
+                              <i className="fas fa-angle-right"></i>
+                            </button>
+                            <button
+                              onClick={() => this.handlePageChange(totalPages)}
+                              disabled={currentPage === totalPages}
+                              className={`px-3 py-1 border border-gray-300 text-blue-500 rounded-md ${
+                                currentPage === totalPages
+                                  ? "bg-gray-200 cursor-not-allowed"
+                                  : "bg-white hover:bg-gray-100"
+                              }`}
+                              aria-label="Last Page"
+                            >
+                              <i className="fas fa-angle-double-right"></i>
+                            </button>
+                          </div>
+                        ) : null}
+                      </th>:null}
                     </tr>
                   </thead>
                   <tbody className="rounded-md">
@@ -369,45 +343,46 @@ class Users extends Component {
                           Carregando...
                         </td>
                       </tr>
-                    ) : users.length > 0 ? (
-                      users.map((user) => (
+                    ) : records.length > 0 ? (
+                      records.map((record) => (
                         <tr
-                          key={user.id}
+                          key={record[columns.pk]}
                           className="hover:bg-gray-100 transition-colors duration-200"
                         >
-                          <td className="py-3 px-4 border-b border-gray-200">
-                            {user.id}
-                          </td>
-                          <td className="py-3 px-4 border-b border-gray-200">
-                            {user.nome}
-                          </td>
-                          <td className="py-3 px-4 border-b border-gray-200">
-                            {user.usuario}
-                          </td>
-                          <td className="py-3 px-4 border-b border-gray-200">
-                            {user.email}
-                          </td>
-                          <td className="py-3 px-4 border-b border-gray-200 text-right">
-                            <button
-                              className="px-3 py-1 text-blue-500 rounded-lg hover:text-white hover:bg-blue-600 transition-colors duration-300 mr-2"
-                              onClick={() => this.handleEdit(user.id)}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              className={`px-3 py-1 text-red-500 rounded-lg hover:text-white hover:bg-red-600 transition-colors duration-300 ${
-                                isDeleting === user.id
-                                  ? "cursor-not-allowed"
-                                  : ""
-                              }`}
-                              onClick={() => this.handleDelete(user.id)}
-                              disabled={isDeleting === user.id}
-                            >
-                              {isDeleting === user.id
-                                ? "Excluindo..."
-                                : "Excluir"}
-                            </button>
-                          </td>
+                          {columns.columns.map((column) => (
+                            <td className="py-3 px-4 border-b border-gray-200">
+                              {record[column.column]}
+                            </td>
+                          ))}
+                          {showPagination||showEdit||showDelete?(<td className="py-3 px-4 border-b border-gray-200 text-right">
+                            {showEdit ? (
+                              <button
+                                className="px-3 py-1 text-blue-500 rounded-lg hover:text-white hover:bg-blue-600 transition-colors duration-300 mr-2"
+                                onClick={() =>
+                                  this.handleEdit(record[columns.pk])
+                                }
+                              >
+                                Editar
+                              </button>
+                            ) : null}
+                            {showDelete ? (
+                              <button
+                                className={`px-3 py-1 text-red-500 rounded-lg hover:text-white hover:bg-red-600 transition-colors duration-300 ${
+                                  isDeleting === record[columns.pk]
+                                    ? "cursor-not-allowed"
+                                    : ""
+                                }`}
+                                onClick={() =>
+                                  this.handleDelete(record[columns.pk])
+                                }
+                                disabled={isDeleting === record[columns.pk]}
+                              >
+                                {isDeleting === record[columns.pk]
+                                  ? "Excluindo..."
+                                  : "Excluir"}
+                              </button>
+                            ) : null}
+                          </td>):null}
                         </tr>
                       ))
                     ) : (
@@ -421,17 +396,21 @@ class Users extends Component {
                 </table>
               </div>
               <div className="flex justify-between items-center mt-2 mb-4">
-                <div className="flex items-center space-x-2">
-                  <button
-                    className="mr-2 px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-300"
-                    onClick={this.handleNewUser}
-                  >
-                    <span>Novo</span>
-                  </button>
-                </div>
-                <span className="text-gray-500 mr-2">
-                  Registros: {totalElements}
-                </span>
+                {showAdd ? (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      className="mr-2 px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-300"
+                      onClick={this.handleNewUser}
+                    >
+                      <span>Novo</span>
+                    </button>
+                  </div>
+                ) : null}
+                {showCounter ? (
+                  <span className="text-gray-500 mr-2">
+                    Registros: {totalElements}
+                  </span>
+                ) : null}
               </div>
             </div>
           </div>
