@@ -1,4 +1,4 @@
-// Users.js
+// Table.js
 import axios from "axios";
 import React, { Component } from "react";
 import AddUserModal from "./AddUserModal";
@@ -6,7 +6,7 @@ import ConfirmModal from "./ConfirmModal";
 import EditUserModal from "./EditUserModal";
 import Header from "./Header";
 
-class Users extends Component {
+class Table extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -467,4 +467,4 @@ class Users extends Component {
   }
 }
 
-export default Users;
+export default Table;

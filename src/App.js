@@ -16,7 +16,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
-        <Route path="/users" element={<PrivateRoute><Users /></PrivateRoute>} />
+        <Route path="/users" element={<PrivateRoute><Users initialActiveItem="Usuários" initialSearchValue="" /></PrivateRoute>} />
       </Routes>
     </Router>
   );
