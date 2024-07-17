@@ -25,7 +25,7 @@ class Users extends Component {
       confirmModalOpen: false,
       userIdToDelete: null,
       addUserModalOpen: false,
-      sortColumn: null,
+      sortColumn: '',
       sortDirection: "asc",
       service_api: "http://localhost:8080/usuarios",
       columns: [
