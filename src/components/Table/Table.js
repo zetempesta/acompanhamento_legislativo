@@ -11,7 +11,7 @@ class Table extends Component {
     super(props);
     this.state = {
       activeItem: props.initialActiveItem || "Usuários",
-      users: [],
+      records: [],
       editingUserId: null,
       searchValue: props.initialSearchValue || "",
       isLoading: false,
@@ -27,25 +27,9 @@ class Table extends Component {
       addUserModalOpen: false,
       sortColumn: null,
       sortDirection: "asc",
-      service_api: "http://localhost:8080/usuarios",
-      columns: [
-        {
-          column: "id",
-          title: "ID",
-        },
-        {
-          column: "nome",
-          title: "Nome",
-        },
-        {
-          column: "usuario",
-          title: "Usuário",
-        },
-        {
-          column: "email",
-          title: "Email",
-        },
-      ],
+      serviceApi: "serviceApi",
+      tableTitle: "tableTitle",
+      columns: [],
     };
   }
 
@@ -72,18 +56,17 @@ class Table extends Component {
   ) => {
     this.setState({ isLoading: true, error: null });
     try {
-      const params =  {
-        "page": page,
-        "size": this.state.itemsPerPage,
-        "filter": filter,
-        "sort":{"sortColumn":sortColumn,"sortDirection":sortDirection},
+      const params = {
+        page: page,
+        size: this.state.itemsPerPage,
+        filter: filter,
+        sort: { sortColumn: sortColumn, sortDirection: sortDirection },
       };
 
-
-      const response = await axios.post(this.state.service_api, params);
+      const response = await axios.post(this.state.serviceApi, params);
       if (response.data) {
         this.setState({
-          users: response.data.content,
+          records: response.data.content,
           totalElements: response.data.totalElements,
           totalPages: Math.ceil(
             response.data.totalElements / this.state.itemsPerPage
@@ -91,19 +74,17 @@ class Table extends Component {
           currentInputPagination: page,
         });
       } else {
-        this.setState({ users: [] });
+        this.setState({ records: [] });
       }
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
-      this.setState({ error: "Erro ao buscar usuários", users: [] });
+      this.setState({ error: "Erro ao buscar usuários", records: [] });
     }
     this.setState({ isLoading: false });
   };
 
   handleSort = (column) => {
     const { sortColumn, sortDirection } = this.state;
-
-    
 
     let newSortDirection = "asc";
     if (sortColumn === column && sortDirection === "asc") {
@@ -197,7 +178,7 @@ class Table extends Component {
   render() {
     const {
       activeItem,
-      users,
+      records,
       editingUserId,
       searchValue,
       isLoading,
@@ -212,6 +193,7 @@ class Table extends Component {
       sortColumn,
       sortDirection,
       columns,
+      tableTitle,
     } = this.state;
 
     return (
@@ -220,7 +202,7 @@ class Table extends Component {
         <main className="p-4">
           <div className="flex items-center ">
             <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-4">Usuários</h2>
+              <h2 className="text-2xl font-bold mb-4">{tableTitle}</h2>
             </div>
             <div className="flex items-right">
               <input
@@ -253,50 +235,6 @@ class Table extends Component {
                             : ""}
                         </th>
                       ))}
-                      {/* <th
-                        className="py-3 px-4 text-left cursor-pointer"
-                        onClick={() => this.handleSort("id")}
-                      >
-                        ID{" "}
-                        {sortColumn === "id"
-                          ? sortDirection === "asc"
-                            ? "▲"
-                            : "▼"
-                          : ""}
-                      </th>
-                      <th
-                        className="py-3 px-4 text-left cursor-pointer"
-                        onClick={() => this.handleSort("nome")}
-                      >
-                        Nome{" "}
-                        {sortColumn === "nome"
-                          ? sortDirection === "asc"
-                            ? "▲"
-                            : "▼"
-                          : ""}
-                      </th>
-                      <th
-                        className="py-3 px-4 text-left cursor-pointer"
-                        onClick={() => this.handleSort("usuario")}
-                      >
-                        Usuário{" "}
-                        {sortColumn === "usuario"
-                          ? sortDirection === "asc"
-                            ? "▲"
-                            : "▼"
-                          : ""}
-                      </th>
-                      <th
-                        className="py-3 px-4 text-left cursor-pointer"
-                        onClick={() => this.handleSort("email")}
-                      >
-                        Email{" "}
-                        {sortColumn === "email"
-                          ? sortDirection === "asc"
-                            ? "▲"
-                            : "▼"
-                          : ""}
-                      </th> */}
                       <th className="py-3 px-4 text-right">
                         <div className="items-right text-blue-900 space-x-2">
                           <button
@@ -369,14 +307,14 @@ class Table extends Component {
                           Carregando...
                         </td>
                       </tr>
-                    ) : users.length > 0 ? (
-                      users.map((user) => (
+                    ) : records.length > 0 ? (
+                      records.map((record) => (
                         <tr
-                          key={user.id}
+                          key={record.id}
                           className="hover:bg-gray-100 transition-colors duration-200"
                         >
                           <td className="py-3 px-4 border-b border-gray-200">
-                            {user.id}
+                            {record.id}
                           </td>
                           <td className="py-3 px-4 border-b border-gray-200">
                             {user.nome}
